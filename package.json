@@ -1,5 +1,5 @@
 {
-  "name": "scryptServer",
+  "name": "scryptserver",
   "description": "Scrypt microservice",
   "main": "dist/ScryptClient.js",
   "types": "dist/ScryptClient.d.ts",
@@ -8,7 +8,7 @@
     "type": "git",
     "url": "https://github.com/StefanoBalocco/ScryptServer.git"
   },
-  "version": "1.0.1",
+  "version": "1.0.2",
   "keywords": [
     "scrypt",
     "microservice"
