@@ -1,0 +1,39 @@
+{
+  "name": "ScryptServer",
+  "description": "Scrypt microservice",
+  "main": "dist/ScryptClient.js",
+  "types": "dist/ScryptClient.d.ts",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/StefanoBalocco/ScryptServer.git"
+  },
+  "version": "1.0.0",
+  "keywords": [
+    "scrypt",
+    "microservice"
+  ],
+  "author": "Stefano Balocco <stefano.balocco@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/StefanoBalocco/ScryptServer/issues"
+  },
+  "homepage": "https://github.com/StefanoBalocco/ScryptServer",
+  "dependencies": {
+    "@hono/node-server": "^1.14.3",
+    "hono": "^4.7.11",
+    "mri": "^1.2.0",
+    "undici": "^7.10.0",
+    "workerpool": "^9.3.2",
+    "zeptologger": "^1.0.2"
+  },
+  "devDependencies": {
+    "@types/node": "~20",
+    "typescript": "~5"
+  },
+  "scripts": {
+    "build": "node_modules/typescript/bin/tsc && node_modules/typescript/bin/tsc -p tsconfig-declarations.json",
+    "start": "/usr/bin/env node dist/ScryptServer.js"
+  },
+  "bin": "dist/ScryptServer.js"
+}
