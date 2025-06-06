@@ -1,5 +1,5 @@
 {
-  "name": "ScryptServer",
+  "name": "scryptServer",
   "description": "Scrypt microservice",
   "main": "dist/ScryptClient.js",
   "types": "dist/ScryptClient.d.ts",
