@@ -1,3 +1,4 @@
+import { cpus } from 'node:os';
 import path from 'path';
 import { Agent, request } from 'undici';
 import workerpool from 'workerpool';
@@ -6,7 +7,7 @@ export class ScryptClient {
     _workerPool;
     _agent;
     _defaultParams;
-    constructor(baseUrl, cacert = undefined, maxConcurrencyFallback = 2, defaultParams = {}) {
+    constructor(baseUrl, cacert = undefined, maxConcurrencyFallback = -1, defaultParams = {}) {
         this._baseUrl = baseUrl;
         this._defaultParams = {
             cost: defaultParams.cost ?? 16384,
@@ -27,6 +28,10 @@ export class ScryptClient {
             }
         };
         this._agent = new Agent(agentOptions);
+        if (-1 === maxConcurrencyFallback) {
+            const cores = cpus();
+            maxConcurrencyFallback = Math.ceil(((0 < cores.length) ? cores.length : 1) / 4);
+        }
         if (0 < maxConcurrencyFallback) {
             this._workerPool = workerpool.pool(path.join(__dirname, 'Worker.js'), {
                 minWorkers: 0,

@@ -197,7 +197,8 @@ The ScryptClient constructor accepts the following parameters:
 
 - `baseUrl` (string): The URL of the scrypt server
 - `cacert` (Buffer, optional): CA certificate for HTTPS connections
-- `maxConcurrencyFallback` (number, default: 2): Maximum worker threads for local fallback
+- `maxConcurrencyFallback` (number, default: -1): Maximum worker threads for local fallback
+    - `-1`: Auto-detect (uses 1/4 of CPU cores, minimum 1)
     - `0`: Disable fallback completely
     - `> 0`: Use specified number of workers
 - `defaultParams` (Partial<ScryptParams>, optional): Default scrypt parameters
