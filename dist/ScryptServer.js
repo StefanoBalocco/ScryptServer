@@ -32,11 +32,12 @@ class ScryptServer {
                 const body = await context.req.json();
                 if (body) {
                     if ('string' === typeof body.data) {
-                        if (Number.isInteger(body.cost) && Number.isInteger(body.blockSize) && Number.isInteger(body.parallelization) && Number.isInteger(body.keylen)) {
+                        if (Number.isInteger(body.cost) && Number.isInteger(body.blockSize) && Number.isInteger(body.parallelization) && Number.isInteger(body.saltlen) && Number.isInteger(body.keylen)) {
                             returnValue[0] = await this.hash(body['data'], {
                                 cost: body.cost,
                                 blockSize: body.blockSize,
                                 parallelization: body.parallelization,
+                                saltlen: body.saltlen,
                                 keylen: body.keylen
                             });
                         }
@@ -98,8 +99,7 @@ class ScryptServer {
     async compare(data, hash) {
         let returnValue = {};
         try {
-            const hashBuffer = Buffer.from(hash, 'base64');
-            returnValue.result = await this._workerPool.exec('compare', [data, hashBuffer]);
+            returnValue.result = await this._workerPool.exec('compare', [data, hash]);
         }
         catch (error) {
             returnValue.error = error instanceof Error ? error.message : 'internal error';
@@ -110,8 +110,7 @@ class ScryptServer {
     async hash(data, params) {
         let returnValue = {};
         try {
-            const hashBuffer = await this._workerPool.exec('hash', [data, params]);
-            returnValue.result = hashBuffer.toString('base64');
+            returnValue.result = await this._workerPool.exec('hash', [data, params]);
         }
         catch (error) {
             returnValue.error = error instanceof Error ? error.message : 'internal error';
@@ -145,14 +144,14 @@ class ScryptServer {
         }
         this._webserver = serve(server);
         if (this._webserver) {
-            _logger.log(ZeptoLogger.LogLevel.NOTICE, 'scrypt server started');
+            _logger.log(ZeptoLogger.LogLevel.NOTICE, 'ScryptServer started');
         }
         else {
-            _logger.log(ZeptoLogger.LogLevel.CRITICAL, 'scrypt server wasn\'t started');
+            _logger.log(ZeptoLogger.LogLevel.CRITICAL, 'ScryptServer wasn\'t started');
         }
     }
     _logOpenStream() {
-        _logger.destination = createWriteStream(path.resolve(path.join(this._config.logpath, 'scryptServer.log')), { flags: 'a' });
+        _logger.destination = createWriteStream(path.resolve(path.join(this._config.logpath, 'ScryptServer.log')), { flags: 'a' });
         _logger.log(ZeptoLogger.LogLevel.INFO, 'Log file opened');
     }
 }

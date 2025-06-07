@@ -9,7 +9,7 @@ import workerpool from 'workerpool';
 import ZeptoLogger from 'zeptologger';
 import { Config, DefaultConfig } from './DefaultConfig.js';
 
-interface scryptResponse<T> {
+interface ScryptResponse<T> {
 	error?: string;
 	result?: T;
 }
@@ -18,6 +18,7 @@ interface ScryptParams {
 	cost: number,
 	blockSize: number,
 	parallelization: number,
+	saltlen: number,
 	keylen: number
 }
 
@@ -53,16 +54,17 @@ class ScryptServer {
 		this._app.post(
 			'/hash',
 			async( context ) => {
-				let returnValue: [ scryptResponse<string>, ( 200 | 400 ) ] = [ {}, 200 ];
+				let returnValue: [ ScryptResponse<string>, ( 200 | 400 ) ] = [ {}, 200 ];
 				try {
 					const body = await context.req.json();
 					if( body ) {
 						if( 'string' === typeof body.data ) {
-							if( Number.isInteger( body.cost ) && Number.isInteger( body.blockSize ) && Number.isInteger( body.parallelization ) && Number.isInteger( body.keylen ) ) {
+							if( Number.isInteger( body.cost ) && Number.isInteger( body.blockSize ) && Number.isInteger( body.parallelization ) && Number.isInteger( body.saltlen ) && Number.isInteger( body.keylen ) ) {
 								returnValue[ 0 ] = await this.hash( body[ 'data' ], {
 									cost: body.cost,
 									blockSize: body.blockSize,
 									parallelization: body.parallelization,
+									saltlen: body.saltlen,
 									keylen: body.keylen
 								} );
 							} else {
@@ -87,7 +89,7 @@ class ScryptServer {
 		this._app.post(
 			'/compare',
 			async( context ) => {
-				let returnValue: [ scryptResponse<boolean>, ( 200 | 400 ) ] = [ {}, 200 ];
+				let returnValue: [ ScryptResponse<boolean>, ( 200 | 400 ) ] = [ {}, 200 ];
 				try {
 					const body = await context.req.json();
 					if( body && ( 'string' === typeof body.data ) && ( 'string' === typeof body.hash ) ) {
@@ -123,11 +125,10 @@ class ScryptServer {
 		}
 	}
 
-	public async compare( data: string, hash: string ): Promise<scryptResponse<boolean>> {
-		let returnValue: scryptResponse<boolean> = {};
+	public async compare( data: string, hash: string ): Promise<ScryptResponse<boolean>> {
+		let returnValue: ScryptResponse<boolean> = {};
 		try {
-			const hashBuffer: Buffer = Buffer.from( hash, 'base64' );
-			returnValue.result = await this._workerPool.exec( 'compare', [ data, hashBuffer ] ) as boolean;
+			returnValue.result = await this._workerPool.exec( 'compare', [ data, hash ] ) as boolean;
 		} catch( error ) {
 			returnValue.error = error instanceof Error ? error.message : 'internal error';
 			_logger.log( ZeptoLogger.LogLevel.ERROR, error );
@@ -135,11 +136,10 @@ class ScryptServer {
 		return returnValue;
 	}
 
-	public async hash( data: string, params: ScryptParams ): Promise<scryptResponse<string>> {
-		let returnValue: scryptResponse<string> = {};
+	public async hash( data: string, params: ScryptParams ): Promise<ScryptResponse<string>> {
+		let returnValue: ScryptResponse<string> = {};
 		try {
-			const hashBuffer = await this._workerPool.exec( 'hash', [ data, params ] ) as Buffer;
-			returnValue.result = hashBuffer.toString( 'base64' );
+			returnValue.result = await this._workerPool.exec( 'hash', [ data, params ] ) as string;
 		} catch( error ) {
 			returnValue.error = error instanceof Error ? error.message : 'internal error';
 			_logger.log( ZeptoLogger.LogLevel.ERROR, error );
@@ -178,14 +178,14 @@ class ScryptServer {
 		}
 		this._webserver = serve( server );
 		if( this._webserver ) {
-			_logger.log( ZeptoLogger.LogLevel.NOTICE, 'scrypt server started' );
+			_logger.log( ZeptoLogger.LogLevel.NOTICE, 'ScryptServer started' );
 		} else {
-			_logger.log( ZeptoLogger.LogLevel.CRITICAL, 'scrypt server wasn\'t started' );
+			_logger.log( ZeptoLogger.LogLevel.CRITICAL, 'ScryptServer wasn\'t started' );
 		}
 	}
 
 	public _logOpenStream(): void {
-		_logger.destination = createWriteStream( path.resolve( path.join( this._config.logpath, 'scryptServer.log' ) ), { flags: 'a' } );
+		_logger.destination = createWriteStream( path.resolve( path.join( this._config.logpath, 'ScryptServer.log' ) ), { flags: 'a' } );
 		_logger.log( ZeptoLogger.LogLevel.INFO, 'Log file opened' );
 	}
 }
