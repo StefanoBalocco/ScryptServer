@@ -1,16 +1,16 @@
 import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 import workerpool from 'workerpool';
-const BINARY_VERSION = 0x01;
+const BINARY_VERSION = 0x02;
 function _hash(data, salt, params) {
     let returnValue;
     if (data && (0 < data.length) && (2048 >= data.length)) {
         if (salt && (params.saltlen === salt.length)) {
-            if ((1023 < params.cost) && (65537 > params.cost)) {
+            if ((4096 <= params.cost) && (524288 >= params.cost)) {
                 if (0 === (params.cost & (params.cost - 1))) {
-                    if ((0 < params.blockSize) && (16 > params.blockSize)) {
-                        if ((0 < params.parallelization) && (16 > params.parallelization)) {
-                            if ((15 < params.saltlen) && (256 > params.saltlen)) {
-                                if ((15 < params.keylen) && (256 > params.keylen)) {
+                    if ((1 <= params.blockSize) && (16 >= params.blockSize)) {
+                        if ((1 <= params.parallelization) && (16 >= params.parallelization)) {
+                            if ((16 <= params.saltlen) && (47 >= params.saltlen)) {
+                                if ((16 <= params.keylen) && (271 >= params.keylen)) {
                                     try {
                                         const derivedKey = scryptSync(data, salt, params.keylen, {
                                             cost: params.cost,
@@ -19,14 +19,13 @@ function _hash(data, salt, params) {
                                             maxmem: (128 * params.cost * params.blockSize * params.parallelization * 2)
                                         });
                                         if (derivedKey.length === params.keylen) {
-                                            returnValue = Buffer.allocUnsafe(6 + params.saltlen + params.keylen);
+                                            returnValue = Buffer.allocUnsafe(4 + params.saltlen + params.keylen);
                                             returnValue.writeUInt8(BINARY_VERSION, 0);
-                                            returnValue.writeUInt16BE(params.cost, 1);
-                                            returnValue.writeUInt8((params.blockSize << 4) | params.parallelization, 3);
-                                            returnValue.writeUInt8(params.saltlen, 4);
-                                            returnValue.writeUInt8(params.keylen, 5);
-                                            salt.copy(returnValue, 6);
-                                            derivedKey.copy(returnValue, 6 + params.saltlen);
+                                            returnValue.writeUInt8((((params.blockSize - 1) << 4) | (params.parallelization - 1)), 1);
+                                            returnValue.writeUInt8(((Math.log2(params.cost) - 12) << 5 | params.saltlen - 16), 2);
+                                            returnValue.writeUInt8(params.keylen - 16, 3);
+                                            salt.copy(returnValue, 4);
+                                            derivedKey.copy(returnValue, 4 + params.saltlen);
                                         }
                                         else {
                                             throw new Error('Derived key length does not match keylen');
@@ -37,19 +36,19 @@ function _hash(data, salt, params) {
                                     }
                                 }
                                 else {
-                                    throw new Error('Invalid keylen (16-255)');
+                                    throw new Error('Invalid keylen (16-271)');
                                 }
                             }
                             else {
-                                throw new Error('Invalid saltlen (16-255)');
+                                throw new Error('Invalid saltlen (16-47)');
                             }
                         }
                         else {
-                            throw new Error('Invalid parallelization parameter (1-15)');
+                            throw new Error('Invalid parallelization parameter (1-16)');
                         }
                     }
                     else {
-                        throw new Error('Invalid blockSize parameter (1-15)');
+                        throw new Error('Invalid blockSize parameter (1-16)');
                     }
                 }
                 else {
@@ -57,7 +56,7 @@ function _hash(data, salt, params) {
                 }
             }
             else {
-                throw new Error('Invalid cost parameter (1024-65535)');
+                throw new Error('Invalid cost parameter (4096-524288)');
             }
         }
         else {
@@ -88,6 +87,29 @@ function compare(data, hashBase64) {
                                     cost: hash.readUInt16BE(1),
                                     blockSize: blockSizeParallelization >> 4,
                                     parallelization: blockSizeParallelization & 0x0F,
+                                    saltlen: saltlen,
+                                    keylen: keylen
+                                });
+                                if (derivedKey.length === hash.length) {
+                                    returnValue = timingSafeEqual(derivedKey, hash);
+                                }
+                            }
+                            else {
+                                throw new Error('Invalid hash buffer length');
+                            }
+                            break;
+                        }
+                        case 0x02: {
+                            const block2 = hash.readUInt8(2);
+                            const saltlen = (block2 & 0x1F) + 16;
+                            const keylen = hash.readUInt8(3) + 16;
+                            const expectedLength = 4 + saltlen + keylen;
+                            if (expectedLength === hash.length) {
+                                const block1 = hash.readUInt8(1);
+                                const derivedKey = _hash(data, hash.subarray(4, 4 + saltlen), {
+                                    cost: 2 ** ((block2 >> 5) + 12),
+                                    blockSize: (block1 >> 4) + 1,
+                                    parallelization: (block1 & 0x0F) + 1,
                                     saltlen: saltlen,
                                     keylen: keylen
                                 });

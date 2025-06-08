@@ -45,11 +45,11 @@ Hashes data using scrypt with configurable parameters.
 
 Request body (JSON):
 - `data` (string, required): The data to hash (max 2048 characters)
-- `cost` (number, required): CPU/memory cost parameter (must be power of 2, range: 1024-65535)
-- `blockSize` (number, required): Block size parameter (range: 1-15)
-- `parallelization` (number, required): Parallelization parameter (range: 1-15)
-- `saltlen` (number, required): Salt length in bytes (range: 16-255)
-- `keylen` (number, required): Desired key length in bytes (range: 16-255)
+- `cost` (number, required): CPU/memory cost parameter (must be power of 2, range: 4096-524288)
+- `blockSize` (number, required): Block size parameter (range: 1-16)
+- `parallelization` (number, required): Parallelization parameter (range: 1-16)
+- `saltlen` (number, required): Salt length in bytes (range: 16-47)
+- `keylen` (number, required): Desired key length in bytes (range: 16-271)
 
 Example request:
 ```json
@@ -96,7 +96,18 @@ Example response:
 
 ### Binary Hash Format
 
-The scrypt implementation uses a custom binary format with versioning:
+The scrypt implementation uses a custom binary format with versioning.
+
+Version 2 is structured as follows:
+- 1 byte: binary version (0x02)
+- 1 byte: blockSize - 1 (4 bit, between 1 and 16) & parallelization - 1 (4 bit, between 1 and 16)
+- 1 byte: (log2 cost) - 12 (3 bit, between 12 and 19 that's mean 4096-524288) & saltlen - 16 (5 bit, between 16 and 47)
+- 1 byte: keylen - 16 (between 16 and 271)
+- saltlen bytes: salt
+- keylen bytes: derived key
+- Total: 4 + saltlen + keylen bytes
+
+Version 1 was:
 - 1 byte: binary version (0x01)
 - 2 bytes: cost (uint16, big endian)
 - 1 byte: blockSize (4 bits) + parallelization (4 bits)
@@ -241,7 +252,17 @@ Both hash and compare methods return an object with either:
 
 Always check for the presence of `error` before using `result`.
 
-## Changes in v1.1
+
+## Changes in v1.2.0
+- **Binary format updated (version 0x02)**:
+   - Extended cost range (between 2^12 to 2^19)
+   - Extended keylen range (16-271)
+   - Extended blockSize and parallelization range (1-16)
+   - Reduced saltlen range (16-47)
+   - Total size now: 4 + saltlen + keylen bytes
+   - Backward compatible with version 1
+
+## Changes in v1.1.0
 
 - **ScryptClient constructor parameter order changed**:
    - Previous: `new ScryptClient(baseUrl, cacert, maxConcurrency, defaultParams)`

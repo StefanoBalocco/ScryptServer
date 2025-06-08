@@ -1,17 +1,16 @@
 import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 import workerpool from 'workerpool';
 
-// Binary format:
-// - 1 byte: binary version (0x01)
-// - 2 byte: cost (uint16, big endian)
-// - 1 byte: blockSize (4 bit) + parallelization (4 bit)
-// - 1 byte: saltlen
-// - 1 byte: keylen
+// Binary format v2:
+// - 1 byte: binary version (0x02)
+// - 1 byte: blockSize - 1 (4 bit, between 1 and 16) & parallelization - 1 (4 bit, between 1 and 16)
+// - 1 byte: (log2 cost) - 12 (3 bit, between 12 and 19) & saltlen - 16 (5 bit, between 16 and 47)
+// - 1 byte: keylen - 16 (between 16 and 271)
 // - saltlen byte: salt
 // - keylen byte: derived key
-// Total: 6 + saltlen + keylen byte
+// Total: 4 + saltlen + keylen byte
 
-const BINARY_VERSION = 0x01;
+const BINARY_VERSION = 0x02;
 
 interface ScryptParams {
 	cost: number,
@@ -25,13 +24,13 @@ function _hash( data: string, salt: Buffer, params: ScryptParams ): Buffer {
 	let returnValue: Buffer;
 	if( data && ( 0 < data.length ) && ( 2048 >= data.length ) ) {
 		if( salt && ( params.saltlen === salt.length ) ) {
-			if( ( 1023 < params.cost ) && ( 65537 > params.cost ) ) {
+			if( ( 4096 <= params.cost ) && ( 524288 >= params.cost ) ) {
 				// Check if cost is a power of 2
 				if( 0 === ( params.cost & ( params.cost - 1 ) ) ) {
-					if( ( 0 < params.blockSize ) && ( 16 > params.blockSize ) ) {
-						if( ( 0 < params.parallelization ) && ( 16 > params.parallelization ) ) {
-							if( ( 15 < params.saltlen ) && ( 256 > params.saltlen ) ) {
-								if( ( 15 < params.keylen ) && ( 256 > params.keylen ) ) {
+					if( ( 1 <= params.blockSize ) && ( 16 >= params.blockSize ) ) {
+						if( ( 1 <= params.parallelization ) && ( 16 >= params.parallelization ) ) {
+							if( ( 16 <= params.saltlen ) && ( 47 >= params.saltlen ) ) {
+								if( ( 16 <= params.keylen ) && ( 271 >= params.keylen ) ) {
 									try {
 										const derivedKey: Buffer = scryptSync(
 											data,
@@ -45,21 +44,19 @@ function _hash( data: string, salt: Buffer, params: ScryptParams ): Buffer {
 											}
 										);
 										if( derivedKey.length === params.keylen ) {
-											returnValue = Buffer.allocUnsafe( 6 + params.saltlen + params.keylen );
+											returnValue = Buffer.allocUnsafe( 4 + params.saltlen + params.keylen );
 											// binary version (1 byte)
 											returnValue.writeUInt8( BINARY_VERSION, 0 );
-											// cost (2 byte, big endian)
-											returnValue.writeUInt16BE( params.cost, 1 );
 											// blockSize (4 bit) & parallelization (4 bit) in 1 byte
-											returnValue.writeUInt8( ( params.blockSize << 4 ) | params.parallelization, 3 );
-											// saltlen (1 byte)
-											returnValue.writeUInt8( params.saltlen, 4 );
+											returnValue.writeUInt8( ( ( ( params.blockSize - 1 ) << 4 ) | ( params.parallelization - 1 ) ), 1 );
+											//  (log2 cost) - 12 (3 bit) & saltlen - 16 (5 bit) in 1 byte
+											returnValue.writeUInt8( ( ( Math.log2( params.cost ) - 12 ) << 5 | params.saltlen - 16 ), 2 );
 											// keylen (1 byte)
-											returnValue.writeUInt8( params.keylen, 5 );
+											returnValue.writeUInt8( params.keylen - 16, 3 );
 											// salt (saltlen byte)
-											salt.copy( returnValue, 6 );
+											salt.copy( returnValue, 4 );
 											// hash (keylen byte)
-											derivedKey.copy( returnValue, 6 + params.saltlen );
+											derivedKey.copy( returnValue, 4 + params.saltlen );
 										} else {
 											throw new Error( 'Derived key length does not match keylen' );
 										}
@@ -67,22 +64,22 @@ function _hash( data: string, salt: Buffer, params: ScryptParams ): Buffer {
 										throw ( error instanceof Error ? error : new Error( 'Derivation failed' ) );
 									}
 								} else {
-									throw new Error( 'Invalid keylen (16-255)' );
+									throw new Error( 'Invalid keylen (16-271)' );
 								}
 							} else {
-								throw new Error( 'Invalid saltlen (16-255)' );
+								throw new Error( 'Invalid saltlen (16-47)' );
 							}
 						} else {
-							throw new Error( 'Invalid parallelization parameter (1-15)' );
+							throw new Error( 'Invalid parallelization parameter (1-16)' );
 						}
 					} else {
-						throw new Error( 'Invalid blockSize parameter (1-15)' );
+						throw new Error( 'Invalid blockSize parameter (1-16)' );
 					}
 				} else {
 					throw new Error( 'Invalid cost (not be a power of 2)' );
 				}
 			} else {
-				throw new Error( 'Invalid cost parameter (1024-65535)' );
+				throw new Error( 'Invalid cost parameter (4096-524288)' );
 			}
 		} else {
 			throw new Error( 'Invalid salt length' );
@@ -115,6 +112,32 @@ function compare( data: string, hashBase64: string ): boolean {
 										cost: hash.readUInt16BE( 1 ),
 										blockSize: blockSizeParallelization >> 4,
 										parallelization: blockSizeParallelization & 0x0F,
+										saltlen: saltlen,
+										keylen: keylen
+									}
+								);
+								if( derivedKey.length === hash.length ) {
+									returnValue = timingSafeEqual( derivedKey, hash );
+								}
+							} else {
+								throw new Error( 'Invalid hash buffer length' );
+							}
+							break;
+						}
+						case 0x02: {
+							const block2: number = hash.readUInt8( 2 );
+							const saltlen: number = ( block2 & 0x1F ) + 16;
+							const keylen: number = hash.readUInt8( 3 ) + 16;
+							const expectedLength: number = 4 + saltlen + keylen;
+							if( expectedLength === hash.length ) {
+								const block1: number = hash.readUInt8( 1 );
+								const derivedKey: Buffer = _hash(
+									data,
+									hash.subarray( 4, 4 + saltlen ),
+									{
+										cost: 2 ** ( ( block2 >> 5 ) + 12 ),
+										blockSize: ( block1 >> 4 ) + 1,
+										parallelization: ( block1 & 0x0F ) + 1,
 										saltlen: saltlen,
 										keylen: keylen
 									}
