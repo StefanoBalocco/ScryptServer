@@ -8,18 +8,11 @@ import path from 'path';
 import workerpool from 'workerpool';
 import ZeptoLogger from 'zeptologger';
 import { Config, DefaultConfig } from './DefaultConfig.js';
+import { ScryptParams } from './ScryptClient.js';
 
 interface ScryptResponse<T> {
 	error?: string;
 	result?: T;
-}
-
-interface ScryptParams {
-	cost: number,
-	blockSize: number,
-	parallelization: number,
-	saltlen: number,
-	keylen: number
 }
 
 const _logger = ZeptoLogger.GetLogger();
@@ -179,6 +172,7 @@ class ScryptServer {
 		this._webserver = serve( server );
 		if( this._webserver ) {
 			_logger.log( ZeptoLogger.LogLevel.NOTICE, 'ScryptServer started' );
+			console.log( `ScryptServer started on ${this._config.ip}:${this._config.port}` );
 		} else {
 			_logger.log( ZeptoLogger.LogLevel.CRITICAL, 'ScryptServer wasn\'t started' );
 		}

@@ -3,7 +3,7 @@ interface ScryptResponse<T> {
     error?: string;
     result?: T;
 }
-interface ScryptParams {
+export interface ScryptParams {
     cost: number;
     blockSize: number;
     parallelization: number;

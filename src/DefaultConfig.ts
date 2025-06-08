@@ -4,6 +4,7 @@ const cores: CpuInfo[] = cpus();
 const workers: number = ( ( 0 < cores.length ) ? cores.length : 1 );
 
 type Undefinedable<T> = T | undefined;
+
 export type Config = {
 	minWorkers: number,
 	maxWorkers: number,
