@@ -20,6 +20,7 @@
   "files": [
     "src/Worker.ts",
     "src/ScryptServer.ts",
-    "src/ScryptClient.ts"
+    "src/ScryptClient.ts",
+    "src/main.ts"
   ],
 }

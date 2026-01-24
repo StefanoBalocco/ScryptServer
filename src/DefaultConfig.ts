@@ -8,7 +8,7 @@ type Undefinedable<T> = T | undefined;
 export type Config = {
 	minWorkers: number,
 	maxWorkers: number,
-	logpath: string,
+	logpath: Undefinedable<string>,
 	ip: string,
 	port: number,
 	certificate: Undefinedable<string>,

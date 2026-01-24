@@ -1,7 +1,7 @@
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
-import mri from 'mri';
 import { createWriteStream } from 'node:fs';
+import { Writable } from 'node:stream';
 import { readFile } from 'node:fs/promises';
 import { createServer as createHttpsServer } from 'node:https';
 import path from 'path';
@@ -18,7 +18,7 @@ interface ScryptResponse<T> {
 const _logger = ZeptoLogger.GetLogger();
 _logger.minLevel = ZeptoLogger.LogLevel.INFO;
 
-class ScryptServer {
+export class ScryptServer {
 	private readonly _config: Config;
 	private _workerPool: workerpool.Pool;
 	private _app: Hono = new Hono();
@@ -101,6 +101,10 @@ class ScryptServer {
 		);
 	}
 
+	public get request(): typeof this._app.request {
+		return this._app.request.bind( this._app );
+	}
+
 	public async reloadCertificates(): Promise<void> {
 		if( this._config.certificate && this._config.certificateKey && this._webserver ) {
 			try {
@@ -171,42 +175,32 @@ class ScryptServer {
 		}
 		this._webserver = serve( server );
 		if( this._webserver ) {
-			_logger.log( ZeptoLogger.LogLevel.NOTICE, 'ScryptServer started' );
-			console.log( `ScryptServer started on ${this._config.ip}:${this._config.port}` );
+			_logger.log( ZeptoLogger.LogLevel.NOTICE, `ScryptServer started on ${this._config.ip}:${this._config.port}` );
 		} else {
 			_logger.log( ZeptoLogger.LogLevel.CRITICAL, 'ScryptServer wasn\'t started' );
 		}
 	}
 
 	public _logOpenStream(): void {
-		_logger.destination = createWriteStream( path.resolve( path.join( this._config.logpath, 'ScryptServer.log' ) ), { flags: 'a' } );
-		_logger.log( ZeptoLogger.LogLevel.INFO, 'Log file opened' );
-	}
-}
-
-let _config: Config = DefaultConfig;
-try {
-	const args = mri(
-		process.argv.slice( 2 ), {
-			alias: { c: 'config' }
+		let message: string = 'skipped';
+		let destination: Writable = new Writable({ write( _, __, callback ) { callback(); }, writev( _, callback ) { callback(); } });
+		if( this._config.logpath ) {
+			message = 'opened';
+			destination = createWriteStream( path.resolve( path.join( this._config.logpath, 'ScryptServer.log' ) ), { flags: 'a' } );
 		}
-	);
-	if( args.config ) {
-		const _filename: string = path.resolve( args.config );
-		const _userConfigData: string = await readFile( _filename, 'utf8' );
-		const _userConfig: Config = JSON.parse( _userConfigData );
-		_config = { ...DefaultConfig, ..._userConfig };
+		_logger.destination = destination;
+		_logger.log( ZeptoLogger.LogLevel.INFO, 'Log file ' + message );
 	}
 
-	const _server = new ScryptServer( _config );
-
-	process.on( 'SIGHUP', async(): Promise<void> => {
-		_server._logOpenStream();
-		await _server.reloadCertificates();
-	} );
-
-	await _server.Start();
-} catch( error ) {
-	_logger.log( ZeptoLogger.LogLevel.CRITICAL, 'exception while starting the server: ' + ( error instanceof Error ? error.message : error ) );
-	process.exit( 1 );
+	public async Stop(): Promise<void> {
+		if( this._webserver ) {
+			await new Promise<void>( ( resolve ) => {
+				this._webserver.close( () => resolve() );
+			} );
+		}
+		if( this._workerPool ) {
+			await this._workerPool.terminate();
+		}
+		_logger.log( ZeptoLogger.LogLevel.NOTICE, 'ScryptServer stopped' );
+	}
 }

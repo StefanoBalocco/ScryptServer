@@ -28,12 +28,18 @@
     "zeptologger": "^1.0.2"
   },
   "devDependencies": {
+    "@ava/typescript": "^6.0.0",
     "@types/node": "~20",
+    "ava": "^6.4.1",
     "typescript": "~5"
   },
   "scripts": {
-    "build": "node_modules/typescript/bin/tsc && node_modules/typescript/bin/tsc -p tsconfig-declarations.json",
-    "start": "/usr/bin/env node dist/ScryptServer.js"
+    "build": "npm run build:server && npm run build:declarations && npm run build:tests",
+    "build:server": "tsc",
+    "build:declarations": "tsc -p tsconfig-declarations.json",
+    "build:tests": "tsc -p tests/tsconfig.json",
+    "run:tests": "npx ava tests/dist/*.test.js --verbose",
+    "run:server": "/usr/bin/env node dist/main.js"
   },
-  "bin": "dist/ScryptServer.js"
+  "bin": "dist/main.js"
 }

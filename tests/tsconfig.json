@@ -1,0 +1,13 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "declaration": false
+  },
+  "files": [
+    "src/TestConfig.ts",
+    "src/Worker.test.ts",
+    "src/ScryptClient.test.ts",
+    "src/ScryptServer.test.ts"
+  ]
+}

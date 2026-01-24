@@ -93,7 +93,8 @@ function _hash( data: string, salt: Buffer, params: ScryptParams ): Buffer {
 function compare( data: string, hashBase64: string ): boolean {
 	let returnValue: boolean = false;
 	if( data && ( 0 < data.length ) && ( 2048 >= data.length ) ) {
-		if( hashBase64 && ( 0 < hashBase64.length ) ) {
+		// Validate base64 format before attempting to decode
+		if( /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test( hashBase64 ) ) {
 			try {
 				const hash: Buffer = Buffer.from( hashBase64, 'base64' );
 				if( hash && 6 < hash.length ) {
@@ -161,7 +162,7 @@ function compare( data: string, hashBase64: string ): boolean {
 				throw ( error instanceof Error ? error : new Error( 'Derivation failed' ) );
 			}
 		} else {
-			throw new Error( 'Missing or invalid hash data' );
+			throw new Error( 'Missing or invalid hash' );
 		}
 	} else {
 		throw new Error( 'Missing, invalid or too much data' );

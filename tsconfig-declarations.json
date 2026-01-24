@@ -19,6 +19,8 @@
     "allowSyntheticDefaultImports": true
   },
   "files": [
-    "src/ScryptClient.ts"
+    "src/ScryptClient.ts",
+    "src/ScryptServer.ts",
+    "src/DefaultConfig.ts"
   ],
 }

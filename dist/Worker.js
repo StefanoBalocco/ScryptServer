@@ -71,7 +71,7 @@ function _hash(data, salt, params) {
 function compare(data, hashBase64) {
     let returnValue = false;
     if (data && (0 < data.length) && (2048 >= data.length)) {
-        if (hashBase64 && (0 < hashBase64.length)) {
+        if (/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(hashBase64)) {
             try {
                 const hash = Buffer.from(hashBase64, 'base64');
                 if (hash && 6 < hash.length) {
@@ -136,7 +136,7 @@ function compare(data, hashBase64) {
             }
         }
         else {
-            throw new Error('Missing or invalid hash data');
+            throw new Error('Missing or invalid hash');
         }
     }
     else {
