@@ -49,7 +49,6 @@ export class ScryptClient {
 			bodyTimeout: 5000,
 			keepAliveTimeout: 4000,
 			keepAliveMaxTimeout: 10000,
-			maxRedirections: 0,
 			connect: {
 				ca: cacert,
 				rejectUnauthorized: true
