@@ -124,7 +124,7 @@ export class ScryptServer {
     async Start() {
         const server = {
             fetch: this._app.fetch,
-            ip: this._config.ip,
+            hostname: this._config.ip,
             port: this._config.port
         };
         if (this._config.certificate && this._config.certificateKey) {
