@@ -1,16 +1,45 @@
 import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 import workerpool from 'workerpool';
 const BINARY_VERSION = 0x02;
-function _hash(data, salt, params) {
+function _hash(data, salt, params, version = BINARY_VERSION) {
     let returnValue;
     if (data && (0 < data.length) && (2048 >= data.length)) {
         if (salt && (params.saltlen === salt.length)) {
-            if ((4096 <= params.cost) && (524288 >= params.cost)) {
+            let costMin;
+            let costMax;
+            let blockSizeMax;
+            let parallelizationMax;
+            let saltlenMax;
+            let keylenMax;
+            switch (version) {
+                case 0x01: {
+                    costMin = 1024;
+                    costMax = 65535;
+                    blockSizeMax = 15;
+                    parallelizationMax = 15;
+                    saltlenMax = 255;
+                    keylenMax = 255;
+                    break;
+                }
+                case 0x02: {
+                    costMin = 4096;
+                    costMax = 524288;
+                    blockSizeMax = 16;
+                    parallelizationMax = 16;
+                    saltlenMax = 47;
+                    keylenMax = 271;
+                    break;
+                }
+                default: {
+                    throw new Error('Unsupported binary version');
+                }
+            }
+            if ((costMin <= params.cost) && (costMax >= params.cost)) {
                 if (0 === (params.cost & (params.cost - 1))) {
-                    if ((1 <= params.blockSize) && (16 >= params.blockSize)) {
-                        if ((1 <= params.parallelization) && (16 >= params.parallelization)) {
-                            if ((16 <= params.saltlen) && (47 >= params.saltlen)) {
-                                if ((16 <= params.keylen) && (271 >= params.keylen)) {
+                    if ((1 <= params.blockSize) && (blockSizeMax >= params.blockSize)) {
+                        if ((1 <= params.parallelization) && (parallelizationMax >= params.parallelization)) {
+                            if ((16 <= params.saltlen) && (saltlenMax >= params.saltlen)) {
+                                if ((16 <= params.keylen) && (keylenMax >= params.keylen)) {
                                     try {
                                         const derivedKey = scryptSync(data, salt, params.keylen, {
                                             cost: params.cost,
@@ -19,13 +48,30 @@ function _hash(data, salt, params) {
                                             maxmem: (128 * params.cost * params.blockSize * params.parallelization * 2)
                                         });
                                         if (derivedKey.length === params.keylen) {
-                                            returnValue = Buffer.allocUnsafe(4 + params.saltlen + params.keylen);
-                                            returnValue.writeUInt8(BINARY_VERSION, 0);
-                                            returnValue.writeUInt8((((params.blockSize - 1) << 4) | (params.parallelization - 1)), 1);
-                                            returnValue.writeUInt8(((Math.log2(params.cost) - 12) << 5 | params.saltlen - 16), 2);
-                                            returnValue.writeUInt8(params.keylen - 16, 3);
-                                            salt.copy(returnValue, 4);
-                                            derivedKey.copy(returnValue, 4 + params.saltlen);
+                                            let headerLength;
+                                            switch (version) {
+                                                case 0x01: {
+                                                    headerLength = 6;
+                                                    returnValue = Buffer.allocUnsafe(headerLength + params.saltlen + params.keylen);
+                                                    returnValue.writeUInt8(version, 0);
+                                                    returnValue.writeUInt16BE(params.cost, 1);
+                                                    returnValue.writeUInt8(((params.blockSize << 4) | params.parallelization), 3);
+                                                    returnValue.writeUInt8(params.saltlen, 4);
+                                                    returnValue.writeUInt8(params.keylen, 5);
+                                                    break;
+                                                }
+                                                case 0x02: {
+                                                    headerLength = 4;
+                                                    returnValue = Buffer.allocUnsafe(headerLength + params.saltlen + params.keylen);
+                                                    returnValue.writeUInt8(version, 0);
+                                                    returnValue.writeUInt8((((params.blockSize - 1) << 4) | (params.parallelization - 1)), 1);
+                                                    returnValue.writeUInt8(((Math.log2(params.cost) - 12) << 5 | params.saltlen - 16), 2);
+                                                    returnValue.writeUInt8(params.keylen - 16, 3);
+                                                    break;
+                                                }
+                                            }
+                                            salt.copy(returnValue, headerLength);
+                                            derivedKey.copy(returnValue, headerLength + params.saltlen);
                                         }
                                         else {
                                             throw new Error('Derived key length does not match keylen');
@@ -36,19 +82,19 @@ function _hash(data, salt, params) {
                                     }
                                 }
                                 else {
-                                    throw new Error('Invalid keylen (16-271)');
+                                    throw new Error(`Invalid keylen (16-${keylenMax})`);
                                 }
                             }
                             else {
-                                throw new Error('Invalid saltlen (16-47)');
+                                throw new Error(`Invalid saltlen (16-${saltlenMax})`);
                             }
                         }
                         else {
-                            throw new Error('Invalid parallelization parameter (1-16)');
+                            throw new Error(`Invalid parallelization parameter (1-${parallelizationMax})`);
                         }
                     }
                     else {
-                        throw new Error('Invalid blockSize parameter (1-16)');
+                        throw new Error(`Invalid blockSize parameter (1-${blockSizeMax})`);
                     }
                 }
                 else {
@@ -56,7 +102,7 @@ function _hash(data, salt, params) {
                 }
             }
             else {
-                throw new Error('Invalid cost parameter (4096-524288)');
+                throw new Error(`Invalid cost parameter (${costMin}-${costMax})`);
             }
         }
         else {
@@ -89,7 +135,7 @@ function compare(data, hashBase64) {
                                     parallelization: blockSizeParallelization & 0x0F,
                                     saltlen: saltlen,
                                     keylen: keylen
-                                });
+                                }, version);
                                 if (derivedKey.length === hash.length) {
                                     returnValue = timingSafeEqual(derivedKey, hash);
                                 }
@@ -112,7 +158,7 @@ function compare(data, hashBase64) {
                                     parallelization: (block1 & 0x0F) + 1,
                                     saltlen: saltlen,
                                     keylen: keylen
-                                });
+                                }, version);
                                 if (derivedKey.length === hash.length) {
                                     returnValue = timingSafeEqual(derivedKey, hash);
                                 }
@@ -146,9 +192,10 @@ function compare(data, hashBase64) {
 }
 function hash(data, params) {
     const salt = randomBytes(params.saltlen);
-    return _hash(data, salt, params).toString('base64');
+    return _hash(data, salt, params, BINARY_VERSION).toString('base64');
 }
 workerpool.worker({
     compare: compare,
     hash: hash
 });
+//# sourceMappingURL=Worker.js.map

@@ -1,4 +1,1 @@
-.idea
-node_modules
-pnpm-lock.yaml
-log/*
+log

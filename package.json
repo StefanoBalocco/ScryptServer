@@ -1,45 +1,68 @@
 {
-  "name": "scryptserver",
+  "name": "@stefanobalocco/scryptserver",
   "description": "Scrypt microservice",
   "main": "dist/ScryptClient.js",
   "types": "dist/ScryptClient.d.ts",
   "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/ScryptClient.d.ts",
+      "import": "./dist/ScryptClient.js"
+    }
+  },
+  "files": [
+    "dist/DefaultConfig.d.ts",
+    "dist/DefaultConfig.js",
+    "dist/ScryptClient.d.ts",
+    "dist/ScryptClient.js",
+    "dist/ScryptServer.d.ts",
+    "dist/ScryptServer.js",
+    "dist/Worker.js",
+    "dist/main.js"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/StefanoBalocco/ScryptServer.git"
   },
-  "version": "1.2.1",
+  "version": "2.0.0",
+  "engines": {
+    "node": "^22.20.0 || ^24.12.0 || >=26.0.0"
+  },
   "keywords": [
     "scrypt",
     "microservice"
   ],
   "author": "Stefano Balocco <stefano.balocco@gmail.com>",
-  "license": "MIT",
+  "license": "BSD-3-Clause",
   "bugs": {
     "url": "https://github.com/StefanoBalocco/ScryptServer/issues"
   },
   "homepage": "https://github.com/StefanoBalocco/ScryptServer",
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
-    "@hono/node-server": "^1.14.3",
-    "hono": "^4.7.11",
-    "mri": "^1.2.0",
-    "undici": "^7.10.0",
-    "workerpool": "^9.3.2",
-    "zeptologger": "^1.0.2"
+    "@hono/node-server": "^2.1.0",
+    "@stefanobalocco/zeptologger": "^2",
+    "hono": "^4",
+    "mri": "^1",
+    "undici": "^8",
+    "workerpool": "^10"
   },
   "devDependencies": {
-    "@ava/typescript": "^6.0.0",
-    "@types/node": "~20",
-    "ava": "^6.4.1",
-    "typescript": "~5"
+    "@stefanobalocco/tsbuild": "^1",
+    "@types/node": "^24",
+    "ava": "^8",
+    "c8": "^12"
   },
   "scripts": {
-    "build": "npm run build:server && npm run build:declarations && npm run build:tests",
-    "build:server": "tsc",
-    "build:declarations": "tsc -p tsconfig-declarations.json",
-    "build:tests": "tsc -p tests/tsconfig.json",
-    "run:tests": "npx ava tests/dist/*.test.js --verbose",
-    "run:server": "/usr/bin/env node dist/main.js"
+    "build": "tsBuild all",
+    "build:library": "tsBuild library",
+    "build:tests": "tsBuild tests",
+    "tests": "c8 --include=src --include=dist --exclude-after-remap --per-file --reporter=text --reporter=lcov ava tests/dist/*.test.js --verbose --serial",
+    "start": "/usr/bin/env node dist/main.js"
   },
-  "bin": "dist/main.js"
+  "bin": {
+    "scryptserver": "./dist/main.js"
+  }
 }

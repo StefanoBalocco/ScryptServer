@@ -133,3 +133,5 @@ export class ScryptClient {
         await this._agent.destroy();
     }
 }
+export default ScryptClient;
+//# sourceMappingURL=ScryptClient.js.map

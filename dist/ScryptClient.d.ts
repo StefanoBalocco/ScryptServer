@@ -24,4 +24,4 @@ export declare class ScryptClient {
     compare(data: string, hashBase64: string): Promise<ScryptResponse<boolean>>;
     destroy(): Promise<void>;
 }
-export {};
+export default ScryptClient;

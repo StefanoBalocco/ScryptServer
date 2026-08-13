@@ -1,10 +1,12 @@
 {
   "compilerOptions": {
-    "outDir": "dist",
+    "rootDir": "./src",
+    "outDir": "./dist",
     "target": "esnext",
     "module": "esnext",
     "moduleResolution": "bundler",
-    "declaration": false,
+    "sourceMap": true,
+    "declaration": true,
     "removeComments": true,
     "strict": true,
     "noImplicitAny": true,
@@ -15,12 +17,14 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noImplicitReturns": true,
-    "allowSyntheticDefaultImports": true
+    "allowSyntheticDefaultImports": true,
+    "types": [ "node" ]
   },
   "files": [
+    "src/DefaultConfig.ts",
     "src/Worker.ts",
     "src/ScryptServer.ts",
     "src/ScryptClient.ts",
     "src/main.ts"
-  ],
+  ]
 }

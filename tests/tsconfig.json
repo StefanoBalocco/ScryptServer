@@ -1,13 +1,32 @@
 {
-  "extends": "../tsconfig.json",
   "compilerOptions": {
-    "outDir": "dist",
-    "declaration": false
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "target": "esnext",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "sourceMap": false,
+    "declaration": false,
+    "removeComments": true,
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictPropertyInitialization": true,
+    "noImplicitThis": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "allowSyntheticDefaultImports": true,
+    "types": [ "node" ]
   },
   "files": [
     "src/TestConfig.ts",
     "src/Worker.test.ts",
     "src/ScryptClient.test.ts",
-    "src/ScryptServer.test.ts"
+    "src/ScryptServer.test.ts",
+    "src/ScryptClientServer.test.ts",
+    "src/ScryptServerLifecycle.test.ts",
+    "src/PackageExports.test.ts"
   ]
 }

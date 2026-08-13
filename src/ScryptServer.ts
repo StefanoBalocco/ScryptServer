@@ -6,7 +6,7 @@ import { readFile } from 'node:fs/promises';
 import { createServer as createHttpsServer } from 'node:https';
 import path from 'path';
 import workerpool from 'workerpool';
-import ZeptoLogger from 'zeptologger';
+import { LogLevel, ZeptoLogger } from '@stefanobalocco/zeptologger';
 import { Config, DefaultConfig } from './DefaultConfig.js';
 import { ScryptParams } from './ScryptClient.js';
 
@@ -15,8 +15,8 @@ interface ScryptResponse<T> {
 	result?: T;
 }
 
-const _logger = ZeptoLogger.GetLogger();
-_logger.minLevel = ZeptoLogger.LogLevel.INFO;
+const _logger = ZeptoLogger.instance;
+_logger.minLevel = LogLevel.INFO;
 
 export class ScryptServer {
 	private readonly _config: Config;
@@ -38,7 +38,7 @@ export class ScryptServer {
 		// 404 handler
 		this._app.notFound(
 			( context ) => {
-				_logger.log( ZeptoLogger.LogLevel.ERROR, '404 Not found: ' + context.req.url );
+				_logger.log( LogLevel.ERROR, '404 Not found: ' + context.req.url );
 				return context.json( { error: 'Not found' }, 404 );
 			}
 		);
@@ -73,7 +73,7 @@ export class ScryptServer {
 				} catch( error ) {
 					returnValue[ 0 ].error = 'Invalid or missing data';
 					returnValue[ 1 ] = 400;
-					_logger.log( ZeptoLogger.LogLevel.ERROR, 'Error while processing hash request' + ( ( error instanceof Error ) ? ': ' + error.message : '' ) );
+					_logger.log( LogLevel.ERROR, 'Error while processing hash request' + ( ( error instanceof Error ) ? ': ' + error.message : '' ) );
 				}
 				return context.json( returnValue[ 0 ], returnValue[ 1 ] );
 			}
@@ -94,7 +94,7 @@ export class ScryptServer {
 				} catch( error ) {
 					returnValue[ 0 ].error = 'Invalid or missing data';
 					returnValue[ 1 ] = 400;
-					_logger.log( ZeptoLogger.LogLevel.ERROR, 'Error while processing compare request' + ( ( error instanceof Error ) ? ': ' + error.message : '' ) );
+					_logger.log( LogLevel.ERROR, 'Error while processing compare request' + ( ( error instanceof Error ) ? ': ' + error.message : '' ) );
 				}
 				return context.json( returnValue[ 0 ], returnValue[ 1 ] );
 			}
@@ -113,11 +113,11 @@ export class ScryptServer {
 					const key: Buffer = await readFile( this._config.certificateKey );
 					if( key ) {
 						this._webserver.setSecureContext( { key: key, cert: certificate } );
-						_logger.log( ZeptoLogger.LogLevel.INFO, 'Reloaded SSL certificates' );
+						_logger.log( LogLevel.INFO, 'Reloaded SSL certificates' );
 					}
 				}
 			} catch( error ) {
-				_logger.log( ZeptoLogger.LogLevel.ERROR, 'Error while reading SSL certificate or key' + ( ( error instanceof Error ) ? ': ' + error.message : '' ) );
+				_logger.log( LogLevel.ERROR, 'Error while reading SSL certificate or key' + ( ( error instanceof Error ) ? ': ' + error.message : '' ) );
 			}
 		}
 	}
@@ -128,7 +128,7 @@ export class ScryptServer {
 			returnValue.result = await this._workerPool.exec( 'compare', [ data, hash ] ) as boolean;
 		} catch( error ) {
 			returnValue.error = error instanceof Error ? error.message : 'internal error';
-			_logger.log( ZeptoLogger.LogLevel.ERROR, error );
+			_logger.log( LogLevel.ERROR, error );
 		}
 		return returnValue;
 	}
@@ -139,7 +139,7 @@ export class ScryptServer {
 			returnValue.result = await this._workerPool.exec( 'hash', [ data, params ] ) as string;
 		} catch( error ) {
 			returnValue.error = error instanceof Error ? error.message : 'internal error';
-			_logger.log( ZeptoLogger.LogLevel.ERROR, error );
+			_logger.log( LogLevel.ERROR, error );
 		}
 		return returnValue;
 	}
@@ -170,14 +170,14 @@ export class ScryptServer {
 					}
 				}
 			} catch( error ) {
-				_logger.log( ZeptoLogger.LogLevel.ERROR, 'Error while reading SSL certificate or key' + ( ( error instanceof Error ) ? ': ' + error.message : '' ) );
+				_logger.log( LogLevel.ERROR, 'Error while reading SSL certificate or key' + ( ( error instanceof Error ) ? ': ' + error.message : '' ) );
 			}
 		}
 		this._webserver = serve( server );
 		if( this._webserver ) {
-			_logger.log( ZeptoLogger.LogLevel.NOTICE, `ScryptServer started on ${this._config.ip}:${this._config.port}` );
+			_logger.log( LogLevel.NOTICE, `ScryptServer started on ${this._config.ip}:${this._config.port}` );
 		} else {
-			_logger.log( ZeptoLogger.LogLevel.CRITICAL, 'ScryptServer wasn\'t started' );
+			_logger.log( LogLevel.CRITICAL, 'ScryptServer wasn\'t started' );
 		}
 	}
 
@@ -189,7 +189,7 @@ export class ScryptServer {
 			destination = createWriteStream( path.resolve( path.join( this._config.logpath, 'ScryptServer.log' ) ), { flags: 'a' } );
 		}
 		_logger.destination = destination;
-		_logger.log( ZeptoLogger.LogLevel.INFO, 'Log file ' + message );
+		_logger.log( LogLevel.INFO, 'Log file ' + message );
 	}
 
 	public async Stop(): Promise<void> {
@@ -201,6 +201,6 @@ export class ScryptServer {
 		if( this._workerPool ) {
 			await this._workerPool.terminate();
 		}
-		_logger.log( ZeptoLogger.LogLevel.NOTICE, 'ScryptServer stopped' );
+		_logger.log( LogLevel.NOTICE, 'ScryptServer stopped' );
 	}
 }

@@ -8,6 +8,10 @@ const defaultParams = {
     saltlen: 16,
     keylen: 32
 };
+const legacyPassword = 'boundary-test-password';
+const v1FixtureCost1024 = 'AQQAERAQABEiM0RVZneImaq7zN3u/wKs3W3pZz+XKhKBWy0ORks=';
+const v1FixtureCost2048 = 'AQgAgRAgABEiM0RVZneImaq7zN3u/99vuVAy43AJ0nJYO+UsySJVGSoMLykp8idNbEdvWdTS';
+const v1FixtureCost4096Salt48 = 'ARAAgTAgqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqsBoi6Nr9f8XlkGlkuoqyxKQ06lFI2fdDjcDJinLWPzw=';
 let pool;
 test.before(() => {
     pool = workerpool.pool(path.join(import.meta.dirname, '..', '..', 'dist', 'Worker.js'), { minWorkers: 1, maxWorkers: 2 });
@@ -221,4 +225,33 @@ test.serial('binary format: minimum values encoded correctly', async (t) => {
     t.is(buffer[3], 0x00);
     const result = await pool.exec('compare', [password, hash]);
     t.true(result);
+});
+test.serial('compare: accepts v1 fixture with cost 1024', async (t) => {
+    const result = await pool.exec('compare', [legacyPassword, v1FixtureCost1024]);
+    t.true(result);
+});
+test.serial('compare: accepts v1 fixture with cost 2048', async (t) => {
+    const result = await pool.exec('compare', [legacyPassword, v1FixtureCost2048]);
+    t.true(result);
+});
+test.serial('compare: accepts v1 fixture with cost 4096 and saltlen 48', async (t) => {
+    const result = await pool.exec('compare', [legacyPassword, v1FixtureCost4096Salt48]);
+    t.true(result);
+});
+test.serial('compare: rejects v1 fixture with wrong password', async (t) => {
+    const result = await pool.exec('compare', ['wrongPassword', v1FixtureCost2048]);
+    t.false(result);
+});
+test.serial('compare: error with truncated v1 hash', async (t) => {
+    const truncated = Buffer.from(v1FixtureCost2048, 'base64').subarray(0, 40);
+    await t.throwsAsync(() => pool.exec('compare', [legacyPassword, truncated.toString('base64')]), { message: /Invalid hash buffer length/ });
+});
+test.serial('compare: error with truncated v2 hash', async (t) => {
+    const buffer = Buffer.allocUnsafe(52);
+    buffer.writeUInt8(0x02, 0);
+    buffer.writeUInt8(((8 - 1) << 4) | (1 - 1), 1);
+    buffer.writeUInt8(((Math.log2(4096) - 12) << 5) | (16 - 16), 2);
+    buffer.writeUInt8(32 - 16, 3);
+    const truncated = buffer.subarray(0, 19);
+    await t.throwsAsync(() => pool.exec('compare', ['password', truncated.toString('base64')]), { message: /Invalid hash buffer length/ });
 });

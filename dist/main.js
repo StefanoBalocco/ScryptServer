@@ -1,10 +1,11 @@
+#!/usr/bin/env node
 import mri from 'mri';
 import { readFile } from 'node:fs/promises';
 import path from 'path';
-import ZeptoLogger from 'zeptologger';
+import { LogLevel, ZeptoLogger } from '@stefanobalocco/zeptologger';
 import { DefaultConfig } from './DefaultConfig.js';
 import { ScryptServer } from './ScryptServer.js';
-const _logger = ZeptoLogger.GetLogger();
+const _logger = ZeptoLogger.instance;
 let _config = DefaultConfig;
 try {
     const args = mri(process.argv.slice(2), {
@@ -32,6 +33,7 @@ try {
     await _server.Start();
 }
 catch (error) {
-    _logger.log(ZeptoLogger.LogLevel.CRITICAL, 'exception while starting the server: ' + (error instanceof Error ? error.message : error));
+    _logger.log(LogLevel.CRITICAL, 'exception while starting the server: ' + (error instanceof Error ? error.message : error));
     process.exit(1);
 }
+//# sourceMappingURL=main.js.map

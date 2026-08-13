@@ -10,12 +10,12 @@ This package includes both a **server** component (ScryptServer) and a **client*
 
 ```bash
 # Start the server with default configuration
-npm start
+npm run start
 
 # Or start with a custom configuration file
-npm start -- -c /path/to/config.json
+npm run start -- -c /path/to/config.json
 # or
-npm start -- --config /path/to/config.json
+npm run start -- --config /path/to/config.json
 ```
 
 ### Configuration
@@ -26,7 +26,7 @@ The server can be configured using a JSON configuration file. By default, it use
 {
   "minWorkers": 2,          // Minimum number of worker threads (default: half of CPU cores)
   "maxWorkers": 4,          // Maximum number of worker threads (default: number of CPU cores)
-  "logpath": "./log",       // Directory for log files
+  "logpath": "./log",       // Directory for log files (remove to disable logging)
   "ip": "127.0.0.1",        // IP address to bind
   "port": 8001,             // Port to listen on
   "certificate": null,      // Path to SSL certificate file (optional)
@@ -145,13 +145,13 @@ The package includes a TypeScript/JavaScript client library that provides:
 ### Installation
 
 ```bash
-npm install scryptserver
+npm install @stefanobalocco/scryptserver
 ```
 
 ### Client Usage
 
 ```typescript
-import { ScryptClient } from 'scryptserver';
+import ScryptClient from '@stefanobalocco/scryptserver';
 
 // Initialize the client with default settings
 const client = new ScryptClient('http://localhost:8001');
@@ -252,6 +252,11 @@ Both hash and compare methods return an object with either:
 
 Always check for the presence of `error` before using `result`.
 
+
+## Changes in v2.0.0
+
+- Restored verification of valid version 1 hashes during comparison.
+- Updated runtime dependencies to `@hono/node-server` 2, `undici` 8, `workerpool` 10, and `@stefanobalocco/zeptologger` 2.
 
 ## Changes in v1.2.0
 - **Binary format updated (version 0x02)**:

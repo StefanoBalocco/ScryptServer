@@ -10,3 +10,4 @@ export const DefaultConfig = {
     certificate: undefined,
     certificateKey: undefined
 };
+//# sourceMappingURL=DefaultConfig.js.map
